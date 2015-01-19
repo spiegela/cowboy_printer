@@ -1,23 +1,20 @@
--module(cowboy_request_printer).
+-module(cowboy_printer).
 
 -behaviour(cowboy_middleware).
 
 -export([execute/2, execute/4]).
 
 execute(Req, Env) ->
-  try print_request(Req)
-  catch Error -> lager:error(Error)
-  after
-    {ok, Req, Env}
-  end.
+  print_request(Req), {ok, Req, Env}.
 
 execute(Code, Headers, Resp, Req) ->
-  print_response(Code, Headers, Resp, Req), Req.
+  print_response(Code, Headers, Resp, Req),
+  Req.
 
 print_request(Req) ->
   print_uri(Req),
   print_headers(cowboy_req:headers(Req)),
-  print_body(read_chunked_body(Req, [])).
+  print_body(read_chunked_body(cowboy_req:body(Req), [])).
 
 print_uri(Req) ->
   Method = cowboy_req:method(Req),
@@ -32,9 +29,8 @@ print_headers(Headers) ->
 
 read_chunked_body({more, Data, Req}, Acc) ->
   read_chunked_body(cowboy_req:body(Req), [Data|Acc]);
-read_chunked_body({ok, Data, Req}, Acc) ->
-  Body = iolist_to_binary(lists:reverse([Data|Acc])),
-  {Body, Req}.
+read_chunked_body({ok, Data, _Req}, Acc) ->
+  iolist_to_binary(lists:reverse([Data|Acc])).
 
 print_response(Code, Headers, Resp, Req) ->
   print_code(Code, Req),
