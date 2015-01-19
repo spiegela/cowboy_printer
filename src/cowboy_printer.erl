@@ -1,9 +1,40 @@
--module(cowboy_response_printer).
+-module(cowboy_request_printer).
 
--export([execute/4]).
+-behaviour(cowboy_middleware).
+
+-export([execute/2, execute/4]).
+
+execute(Req, Env) ->
+  try print_request(Req)
+  catch Error -> lager:error(Error)
+  after
+    {ok, Req, Env}
+  end.
 
 execute(Code, Headers, Resp, Req) ->
   print_response(Code, Headers, Resp, Req), Req.
+
+print_request(Req) ->
+  print_uri(Req),
+  print_headers(cowboy_req:headers(Req)),
+  print_body(read_chunked_body(Req, [])).
+
+print_uri(Req) ->
+  Method = cowboy_req:method(Req),
+  URL = cowboy_req:url(Req),
+  Version = cowboy_req:version(Req),
+  lager:debug("REQUEST: ~s ~s ~s~n", [Method, URL, Version]).
+
+print_headers(Headers) ->
+  lists:foreach(fun({H,V}) ->
+                  lager:debug("~s: ~s~n", [H,V])
+                end, Headers).
+
+read_chunked_body({more, Data, Req}, Acc) ->
+  read_chunked_body(cowboy_req:body(Req), [Data|Acc]);
+read_chunked_body({ok, Data, Req}, Acc) ->
+  Body = iolist_to_binary(lists:reverse([Data|Acc])),
+  {Body, Req}.
 
 print_response(Code, Headers, Resp, Req) ->
   print_code(Code, Req),
@@ -13,11 +44,6 @@ print_response(Code, Headers, Resp, Req) ->
 print_code(Code, Req) ->
   Version = cowboy_req:version(Req),
   lager:debug("RESPONSE: ~s ~i ~s", [Version, Code, description(Code)]).
-
-print_headers(Headers) ->
-  lists:foreach(fun({H,V}) ->
-  	              lager:debug("~s: ~s~n", [H,V])
-  	            end, Headers).
 
 print_body(Resp) ->
   lager:debug("~n~s~n", [Resp]).
