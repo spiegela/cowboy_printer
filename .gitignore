@@ -1,0 +1,6 @@
+deps/*
+ebin/*
+.rebar/*
+*.dump
+.eunit/*
+rel/service_broker/*

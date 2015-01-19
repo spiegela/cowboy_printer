@@ -1,0 +1,13 @@
+{application, cowboy_printer,
+ [
+  {description, ""},
+  {vsn, "0.0.1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  lager,
+                  cowboy
+                 ]},
+  {env, []}
+ ]}.
